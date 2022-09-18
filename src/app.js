@@ -1,90 +1,45 @@
 // src/app.js
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const express = require('express');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const cors = require('cors');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const helmet = require('helmet');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const compression = require('compression');
+import { Auth, getUser } from './auth';
 
-// version and author from our package.json file
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { version, author } = require('../package.json');
+async function init() {
+  // Get our UI elements
+  const userSection = document.querySelector('#user');
+  const loginBtn = document.querySelector('#login');
+  const logoutBtn = document.querySelector('#logout');
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const logger = require('./logger');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pino = require('pino-http')({
-  // Use our default logger instance, which is already configured
-  logger,
-});
+  // Wire up event handlers to deal with login and logout.
+  loginBtn.onclick = () => {
+    // Sign-in via the Amazon Cognito Hosted UI (requires redirects), see:
+    // https://docs.amplify.aws/lib/auth/advanced/q/platform/js/#identity-pool-federation
+    Auth.federatedSignIn();
+  };
+  logoutBtn.onclick = () => {
+    // Sign-out of the Amazon Cognito Hosted UI (requires redirects), see:
+    // https://docs.amplify.aws/lib/auth/emailpassword/q/platform/js/#sign-out
+    Auth.signOut();
+  };
 
-// Create an express app instance we can use to attach middleware and HTTP routes
-const app = express();
-
-// Use logging middleware
-app.use(pino);
-
-// Use security middleware
-app.use(helmet());
-
-// Use CORS middleware so we can make requests across origins
-app.use(cors());
-
-// Use gzip/deflate compression middleware
-app.use(compression());
-
-// Define a simple health check route. If the server is running
-// we'll respond with a 200 OK.  If not, the server isn't healthy.
-app.get('/', (req, res) => {
-  // Clients shouldn't cache this response (always request it fresh)
-  // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#controlling_caching
-  res.setHeader('Cache-Control', 'no-cache');
-
-  // Send a 200 'OK' response with info about our repo
-  res.status(200).json({
-    status: 'ok',
-    author,
-    // TODO: change this to use your GitHub username
-    githubUrl: 'https://github.com/sharonyouchunxue/fragments',
-    version,
-  });
-});
-
-// Add 404 middleware to handle any requests for resources that can't be found
-app.use((req, res) => {
-  res.status(404).json({
-    status: 'error',
-    error: {
-      message: 'not found',
-      code: 404,
-    },
-  });
-});
-
-// Add error-handling middleware to deal with anything else
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  // We may already have an error response we can use, but if not, use a generic
-  // 500 server error and message.
-  const status = err.status || 500;
-  const message = err.message || 'unable to process request';
-
-  // If this is a server error, log something so we can see what's going on.
-  if (status > 499) {
-    logger.error({ err }, `Error processing request`);
+  // See if we're signed in (i.e., we'll have a `user` object)
+  const user = await getUser();
+  if (!user) {
+    // Disable the Logout button
+    logoutBtn.disabled = true;
+    return;
   }
 
-  res.status(status).json({
-    status: 'error',
-    error: {
-      message,
-      code: status,
-    },
-  });
-});
+  // Log the user info for debugging purposes
+  console.log({ user });
 
-// Export our `app` so we can access it in server.js
-module.exports = app;
+  // Update the UI to welcome the user
+  userSection.hidden = false;
+
+  // Show the user's username
+  userSection.querySelector('.username').innerText = user.username;
+
+  // Disable the Login button
+  loginBtn.disabled = true;
+}
+
+// Wait for the DOM to be ready, then start the app
+addEventListener('DOMContentLoaded', init);
