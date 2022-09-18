@@ -1,6 +1,6 @@
 {
   "name": "fragments",
-  "private":"true",
+  "private": "true",
   "version": "0.0.1",
   "description": "Fragments back-end API",
   "scripts": {
@@ -11,5 +11,8 @@
     "url": "git+https://github.com/sharonyouchunxue/fragments.git"
   },
   "author": "Chunxue You",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "prettier": "2.7.1"
+  }
 }
